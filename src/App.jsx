@@ -67,28 +67,6 @@ function Circle({ size = 16, color = "currentColor", fill, style, ...rest }) {
 
 const STORAGE_KEY = "ba-strategy-objective-5-v1";
 
-// VIEW-ONLY BY DEFAULT.
-// The site's purpose is for the Lead & Manager to view plan progress, not edit it,
-// so the app opens in read-only mode for everyone. All add/edit/delete/drag/reorder
-// controls are hidden and fields are locked; data is never modified.
-//
-// To edit the plan yourself, append ?edit=1 to the URL, e.g.
-//   https://your-site/?edit=1
-// Share the plain link (without ?edit=1) with the Lead and Manager for view-only access.
-const READ_ONLY = (() => {
-  try {
-    if (typeof window === "undefined") return true;
-    const p = new URLSearchParams(window.location.search);
-    const editRequested =
-      p.get("edit") === "1" ||
-      p.get("edit") === "true" ||
-      (window.location.hash || "").toLowerCase().includes("edit");
-    return !editRequested; // read-only unless edit mode is explicitly requested
-  } catch (e) {
-    return true;
-  }
-})();
-
 const STATUS_VALUES = ["Not Started","Planned","In Progress","Under Review","Blocked","At Risk","Delayed","Completed","On Hold","Cancelled"];
 const PRIORITY_VALUES = ["Critical","High","Medium","Low"];
 const CONFIDENCE_VALUES = ["High","Medium-High","Medium","Medium-Low","Low"];
@@ -693,7 +671,6 @@ async function loadPersisted() {
   return null;
 }
 async function savePersisted(data) {
-  if (READ_ONLY) return true; // view mode never writes
   const payload = JSON.stringify(data);
   let ok = false;
   try {
@@ -805,9 +782,7 @@ function priorityTone(p) {
   return "neutral";
 }
 
-const EDIT_ICONS = new Set([Plus, Trash2, Copy, Archive, RotateCcw, Save, Upload]);
 const IconBtn = ({ icon: Icon, label, onClick, tone = "default", size = 16, disabled }) => {
-  if (READ_ONLY && EDIT_ICONS.has(Icon)) return null;
   const colors = {
     default: { fg: "#334155", bg: "transparent", hover: "#eef1f5" },
     danger: { fg: "#a3271f", bg: "transparent", hover: "#fbe9e7" },
@@ -834,9 +809,6 @@ const IconBtn = ({ icon: Icon, label, onClick, tone = "default", size = 16, disa
 };
 
 const Button = ({ children, onClick, variant = "primary", icon: Icon, style, disabled, type="button" }) => {
-  // In read-only mode, hide mutating buttons. Keep Export/Print (Download/Printer)
-  // and plain navigation buttons (e.g. Cancel, Clear search) which have no edit icon.
-  if (READ_ONLY && Icon && EDIT_ICONS.has(Icon)) return null;
   const variants = {
     primary: { bg: "#0f2a52", fg: "#fff", bd: "#0f2a52" },
     secondary: { bg: "#fff", fg: "#0f2a52", bd: "#c7d2e2" },
@@ -875,9 +847,9 @@ const inputStyle = {
   padding: "8px 10px", borderRadius: 7, border: "1px solid #d7dde5", fontSize: 13.5,
   fontFamily: "inherit", background: "#fff", color: "#1c2733", width: "100%", boxSizing: "border-box",
 };
-const Input = (props) => <input {...props} disabled={props.disabled || READ_ONLY} style={{ ...inputStyle, ...(props.style||{}) }} />;
-const TextArea = (props) => <textarea {...props} disabled={props.disabled || READ_ONLY} style={{ ...inputStyle, resize: "vertical", minHeight: 60, ...(props.style||{}) }} />;
-const Select = ({ children, ...props }) => <select {...props} disabled={props.disabled || READ_ONLY} style={{ ...inputStyle, ...(props.style||{}) }}>{children}</select>;
+const Input = (props) => <input {...props} style={{ ...inputStyle, ...(props.style||{}) }} />;
+const TextArea = (props) => <textarea {...props} style={{ ...inputStyle, resize: "vertical", minHeight: 60, ...(props.style||{}) }} />;
+const Select = ({ children, ...props }) => <select {...props} style={{ ...inputStyle, ...(props.style||{}) }}>{children}</select>;
 
 function Modal({ open, onClose, title, children, width = 640, footer }) {
   if (!open) return null;
@@ -1158,16 +1130,10 @@ function AppShell({ data, update, log, dirty, saving, onSave, search, setSearch,
             <Badge tone={{ "On Track":"green","Attention Required":"amber","At Risk":"amber","Delayed":"red","Completed":"green" }[health]}>
               <Circle size={8} fill={healthColor(health)} color={healthColor(health)} /> {health}
             </Badge>
-            {READ_ONLY ? (
-              <Badge tone="navy">View only</Badge>
-            ) : (
-              <>
-                <div style={{ fontSize: 11.5, color: "#8592a3", textAlign: "right", minWidth: 120 }}>
-                  {saving ? "Saving…" : dirty ? "Unsaved changes" : `Saved ${data.lastSaved ? fmtDateTime(data.lastSaved) : "never"}`}
-                </div>
-                <Button variant="secondary" icon={Save} onClick={onSave}>Save</Button>
-              </>
-            )}
+            <div style={{ fontSize: 11.5, color: "#8592a3", textAlign: "right", minWidth: 120 }}>
+              {saving ? "Saving…" : dirty ? "Unsaved changes" : `Saved ${data.lastSaved ? fmtDateTime(data.lastSaved) : "never"}`}
+            </div>
+            <Button variant="secondary" icon={Save} onClick={onSave}>Save</Button>
           </header>
 
           <main style={{ flex: 1, padding: "22px 26px", maxWidth: 1500, width: "100%", margin: "0 auto" }}>
@@ -1423,7 +1389,6 @@ function TimelineTab({ data, update, log, drawer, setDrawer, push, confirmState,
   };
 
   const onMouseDownDrag = (e, activity, mode) => {
-    if (READ_ONLY) return; // no rescheduling in view mode
     e.stopPropagation();
     const rect = containerRef.current.getBoundingClientRect();
     setDragState({ id: activity.id, mode, startX: e.clientX, origStart: activity.plannedStart, origEnd: activity.plannedEnd, containerWidth: rect.width });
@@ -1582,7 +1547,7 @@ function TimelineRow({ activity, dayToPct, onMouseDownDrag, onClick, isPrimary, 
   if (activity.status === "Completed") color = "#1a7f4b";
   else if (overdue || activity.status === "Delayed" || activity.status === "At Risk") color = "#a3271f";
   else if (activity.recurring) color = "#4c2f8a";
-  const reorderable = !READ_ONLY && !!(onMoveUp || onMoveDown);
+  const reorderable = !!(onMoveUp || onMoveDown);
 
   return (
     <div
@@ -1631,7 +1596,7 @@ function TimelineRow({ activity, dayToPct, onMouseDownDrag, onClick, isPrimary, 
           <span style={{ textDecoration: activity.status === "Completed" ? "line-through" : "none" }}>{activity.name}</span>
           {overdue && <AlertTriangle size={12} color="#a3271f" aria-label="Overdue" />}
         </button>
-        {!READ_ONLY && isPrimary && onAddSubtask && !activity.milestone && (
+        {isPrimary && onAddSubtask && !activity.milestone && (
           <button onClick={onAddSubtask} aria-label="Add sub-task" title="Add sub-task"
             style={{ border: "none", background: "transparent", cursor: "pointer", color: "#8592a3", padding: "8px 8px 8px 0" }}>
             <Plus size={13} />
