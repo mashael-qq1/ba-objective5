@@ -3,16 +3,26 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
-    "ajv": "^8.17.1",
-    "ajv-keywords": "^5.1.0",
+    "ajv": "8.12.0",
+    "ajv-keywords": "5.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",
     "recharts": "^2.12.7"
   },
   "overrides": {
-    "ajv": "^8.17.1",
-    "ajv-keywords": "^5.1.0"
+    "ajv": "8.12.0",
+    "ajv-keywords": "5.1.0",
+    "schema-utils": {
+      "ajv": "8.12.0",
+      "ajv-keywords": "5.1.0"
+    },
+    "terser-webpack-plugin": {
+      "schema-utils": {
+        "ajv": "8.12.0",
+        "ajv-keywords": "5.1.0"
+      }
+    }
   },
   "scripts": {
     "start": "react-scripts start",
