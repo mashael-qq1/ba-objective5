@@ -4,10 +4,15 @@
   "private": true,
   "dependencies": {
     "ajv": "^8.17.1",
+    "ajv-keywords": "^5.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",
     "recharts": "^2.12.7"
+  },
+  "overrides": {
+    "ajv": "^8.17.1",
+    "ajv-keywords": "^5.1.0"
   },
   "scripts": {
     "start": "react-scripts start",
